@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:edge_detection/edge_detection.dart';
 import 'package:flutter/material.dart';
+import 'package:google_mlkit_text_recognition/google_mlkit_text_recognition.dart';
 import 'package:path/path.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:permission_handler/permission_handler.dart';
@@ -15,6 +16,8 @@ class ExtractIDScreen extends StatefulWidget {
 
 class _ExtractIDScreenState extends State<ExtractIDScreen> {
   String? idImagePath;
+  List<String> textsProcessed = [];
+
   void camera() async {
     bool isCameraGranted = await Permission.camera.request().isGranted;
     if (!isCameraGranted) {
@@ -42,10 +45,25 @@ class _ExtractIDScreenState extends State<ExtractIDScreen> {
         setState(() {
           idImagePath = imagePath;
         });
+        processImage(imagePath);
       }
     } catch (e) {
       print(e);
     }
+  }
+
+  void processImage(String path) async {
+    final inputImage = InputImage.fromFilePath(path);
+    final textRecognizer = TextRecognizer(script: TextRecognitionScript.latin);
+    final RecognizedText recognizedText =
+        await textRecognizer.processImage(inputImage);
+    List<String> texts = [];
+    for (TextBlock block in recognizedText.blocks) {
+      texts.add(block.text);
+    }
+    setState(() {
+      textsProcessed = texts;
+    });
   }
 
   @override
@@ -67,6 +85,16 @@ class _ExtractIDScreenState extends State<ExtractIDScreen> {
                       ),
                     ),
                     Flexible(child: Image.file(File(idImagePath!))),
+                    Expanded(
+                      child: ListView.builder(
+                        itemCount: textsProcessed.length,
+                        itemBuilder: (_, index) {
+                          return ListTile(
+                            title: Text(textsProcessed[index]),
+                          );
+                        },
+                      ),
+                    ),
                   ],
                 )),
       floatingActionButton: FloatingActionButton(
